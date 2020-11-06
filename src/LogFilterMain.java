@@ -1589,7 +1589,12 @@ public class LogFilterMain extends JFrame implements INotiEvent
                         synchronized(FILTER_LOCK)
                         {
                             m_nChangedFilter = STATUS_READY;
+                            try{
                             FILTER_LOCK.wait();
+                            } catch(InterruptedException e){
+                                T.i("Exit m_thFilterParse by InterruptedException");
+                                return;
+                            }
 
                             m_nChangedFilter = STATUS_PARSING;
 
