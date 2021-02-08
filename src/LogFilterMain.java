@@ -340,6 +340,14 @@ public class LogFilterMain extends JFrame implements INotiEvent
     final String INI_HEIGHT         = "INI_HEIGHT";
     final String INI_WINDOW_STATE   = "INI_WINDOW_STATE";
 
+    final String INI_CHECKBOX_FIND          = "INI_CHECKBOX_FIND";
+    final String INI_CHECKBOX_REMOVE        = "INI_CHECKBOX_REMOVE";
+    final String INI_CHECKBOX_SHOW_TAG      = "INI_CHECKBOX_SHOW_TAG";
+    final String INI_CHECKBOX_REMOVE_TAG    = "INI_CHECKBOX_REMOVE_TAG";
+    final String INI_CHECKBOX_SHOW_PID      = "INI_CHECKBOX_SHOW_PID";
+    final String INI_CHECKBOX_SHOW_TID      = "INI_CHECKBOX_SHOW_TID";
+    final String INI_CHECKBOX_HIGHLIGHT     = "INI_CHECKBOX_HIGHLIGHT";
+
     final String INI_COMUMN         = "INI_COMUMN_";
     
     void loadCmd()
@@ -458,6 +466,14 @@ public class LogFilterMain extends JFrame implements INotiEvent
             m_nWinHeight = Integer.parseInt( p.getProperty( INI_HEIGHT ));
             m_nWindState = Integer.parseInt( p.getProperty( INI_WINDOW_STATE ));
             
+            m_chkEnableFind.setSelected(p.getProperty(INI_CHECKBOX_FIND).equals("T") ? true : false);
+            m_chkEnableRemove.setSelected(p.getProperty(INI_CHECKBOX_REMOVE).equals("T") ? true : false);
+            m_chkEnableShowTag.setSelected(p.getProperty(INI_CHECKBOX_SHOW_TAG).equals("T") ? true : false);
+            m_chkEnableRemoveTag.setSelected(p.getProperty(INI_CHECKBOX_REMOVE_TAG).equals("T") ? true : false);
+            m_chkEnableShowPid.setSelected(p.getProperty(INI_CHECKBOX_SHOW_PID).equals("T") ? true : false);
+            m_chkEnableShowTid.setSelected(p.getProperty(INI_CHECKBOX_SHOW_TID).equals("T") ? true : false);
+            m_chkEnableHighlight.setSelected(p.getProperty(INI_CHECKBOX_HIGHLIGHT).equals("T") ? true : false);
+            
             for(int nIndex = 0; nIndex < LogFilterTableModel.COMUMN_MAX; nIndex++)
             {
                 LogFilterTableModel.setColumnWidth( nIndex, Integer.parseInt( p.getProperty( INI_COMUMN + nIndex) ) );
@@ -491,6 +507,14 @@ public class LogFilterMain extends JFrame implements INotiEvent
             p.setProperty(INI_WIDTH,       "" + m_nWinWidth);
             p.setProperty(INI_HEIGHT,      "" + m_nWinHeight);
             p.setProperty(INI_WINDOW_STATE,"" + m_nWindState);
+
+            p.setProperty(INI_CHECKBOX_FIND, m_chkEnableFind.isSelected() ? "T" : "F");
+            p.setProperty(INI_CHECKBOX_REMOVE, m_chkEnableRemove.isSelected() ? "T" : "F");
+            p.setProperty(INI_CHECKBOX_SHOW_TAG, m_chkEnableShowTag.isSelected() ? "T" : "F");
+            p.setProperty(INI_CHECKBOX_REMOVE_TAG, m_chkEnableRemoveTag.isSelected() ? "T" : "F");
+            p.setProperty(INI_CHECKBOX_SHOW_PID, m_chkEnableShowPid.isSelected() ? "T" : "F");
+            p.setProperty(INI_CHECKBOX_SHOW_TID, m_chkEnableShowTid.isSelected() ? "T" : "F");
+            p.setProperty(INI_CHECKBOX_HIGHLIGHT, m_chkEnableHighlight.isSelected() ? "T" : "F");
 
             for(int nIndex = 0; nIndex < LogFilterTableModel.COMUMN_MAX; nIndex++)
             {
