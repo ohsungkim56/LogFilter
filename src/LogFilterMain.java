@@ -1818,7 +1818,18 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
         while(stk.hasMoreElements())
         {
-            if(logInfo.m_strMessage.toLowerCase().contains(stk.nextToken().toLowerCase()))
+            String s = stk.nextToken();
+            StringTokenizer stk2 = new StringTokenizer(s, "&", false);
+            boolean found_flag = true;
+
+            while(stk2.hasMoreTokens())
+            {
+                if(!logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
+                {
+                    found_flag = false;
+                }
+            }
+            if(found_flag)
                 return true;
         }
 
@@ -1833,7 +1844,18 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
         while(stk.hasMoreElements())
         {
-            if(logInfo.m_strMessage.toLowerCase().contains(stk.nextToken().toLowerCase()))
+            String s = stk.nextToken();
+            StringTokenizer stk2 = new StringTokenizer(s, "&", false);
+            boolean found_flag = false;
+            
+            while(stk2.hasMoreTokens())
+            {
+                if(!logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
+                {
+                    found_flag = true;
+                }
+            }
+            if(found_flag)
                 return false;
         }
 
