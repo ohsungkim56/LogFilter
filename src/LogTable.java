@@ -444,53 +444,48 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
             return c;
         }
 
-        String remakeData(int nIndex, String strText)
-        {
-            if(nIndex != LogFilterTableModel.COMUMN_MESSAGE && nIndex != LogFilterTableModel.COMUMN_TAG) return strText;
+        String remakeData(int nIndex, String strText) {
+            if (nIndex != LogFilterTableModel.COMUMN_MESSAGE && nIndex != LogFilterTableModel.COMUMN_TAG)
+                return strText;
 
             String strFind = nIndex == LogFilterTableModel.COMUMN_MESSAGE ? GetFilterFind() : GetFilterShowTag();
             m_bChanged = false;
 
-            strText = strText.replace( " ", "\u00A0" );
-            if(LogColor.COLOR_HIGHLIGHT != null && LogColor.COLOR_HIGHLIGHT.length > 0)
+            strText = strText.replace(" ", "\u00A0");
+            if (LogColor.COLOR_HIGHLIGHT != null && LogColor.COLOR_HIGHLIGHT.length > 0)
                 strText = remakeFind(strText, GetHighlight(), LogColor.COLOR_HIGHLIGHT, true);
             else
                 strText = remakeFind(strText, GetHighlight(), "#00FF00", true);
-            strText = remakeFind(strText, strFind, "#FF0000", false);
-            if(m_bChanged)
+            strText = remakeFind(strText, strFind.replace('&', '|'), "#FF0000", false);
+            if (m_bChanged)
                 strText = "<html><nobr>" + strText + "</nobr></html>";
 
             return strText.replace("\t", "    ");
         }
 
-        String remakeFind(String strText, String strFind, String[] arColor, boolean bUseSpan)
-        {
-            if(strFind == null || strFind.length() <= 0) return strText;
+        String remakeFind(String strText, String strFind, String[] arColor, boolean bUseSpan) {
+            if (strFind == null || strFind.length() <= 0)
+                return strText;
 
-            strFind = strFind.replace( " ", "\u00A0" );
+            strFind = strFind.replace(" ", "\u00A0");
             StringTokenizer stk = new StringTokenizer(strFind, "|");
-            String newText;
             String strToken;
             int nIndex = 0;
+            String formatString;
             
-            while (stk.hasMoreElements())
-            {
-                if(nIndex >= arColor.length)
+            if(bUseSpan)
+                formatString = "<span style=\"background-color:#%s\"><b>$1</b></span>";
+            else
+                formatString = "<font color=#%s><b>$1</b></font>";
+            
+            while (stk.hasMoreElements()) {
+                if (nIndex >= arColor.length)
                     nIndex = 0;
                 strToken = stk.nextToken();
 
                 if(strText.toLowerCase().contains(strToken.toLowerCase()))
                 {
-                    if(bUseSpan)
-                        newText = "<span style=\"background-color:#" + arColor[nIndex] + "\"><b>";
-                    else
-                        newText = "<font color=#" + arColor[nIndex] + "><b>";
-                    newText += strToken;
-                    if(bUseSpan)
-                        newText += "</b></span>";
-                    else
-                        newText += "</b></font>";
-                    strText = strText.replace(strToken, newText);
+                    strText = strText.replaceAll("("+strToken+")", String.format(formatString, arColor[nIndex]));
                     m_bChanged = true;
                     nIndex++;
                 }
@@ -504,8 +499,13 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
 
             strFind = strFind.replace( " ", "\u00A0" );
             StringTokenizer stk = new StringTokenizer(strFind, "|");
-            String newText;
             String strToken;
+            String formatString;
+
+            if(bUseSpan)
+                formatString = "<span style=\"background-color:" + strColor + "\"><b>$1</b></span>";
+            else
+                formatString = "<font color=" + strColor + "><b>$1</b></font>";
 
             while (stk.hasMoreElements())
             {
@@ -513,16 +513,7 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
 
                 if(strText.toLowerCase().contains(strToken.toLowerCase()))
                 {
-                    if(bUseSpan)
-                        newText = "<span style=\"background-color:" + strColor + "\"><b>";
-                    else
-                        newText = "<font color=" + strColor + "><b>";
-                    newText += strToken;
-                    if(bUseSpan)
-                        newText += "</b></span>";
-                    else
-                        newText += "</b></font>";
-                    strText = strText.replace(strToken, newText);
+                    strText = strText.replaceAll("("+strToken+")", String.format(formatString, strColor));
                     m_bChanged = true;
                 }
             }

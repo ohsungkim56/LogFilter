@@ -47,6 +47,7 @@ import javax.swing.BorderFactory;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -202,7 +203,16 @@ public class LogFilterMain extends JFrame implements INotiEvent
     int                       m_nWindState;
     static RecentFileMenu     m_recentMenu;
 //    String                    m_strLastDir;
+    boolean                   m_bCaseSensitive;
 
+    // menu bar
+    JMenuBar menubar;
+    
+    JMenu file;
+    JMenuItem fileOpen;
+
+    JMenu menuOption;
+    JCheckBoxMenuItem menuOption_CaseSensitive;
     public static void main(final String args[])
     {
 //        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -211,33 +221,6 @@ public class LogFilterMain extends JFrame implements INotiEvent
         mainFrame.setTitle(LOGFILTER + " " + VERSION);
 //        mainFrame.addWindowListener(new WindowEventHandler());
 
-        JMenuBar menubar = new JMenuBar();
-        JMenu file = new JMenu("File");
-        file.setMnemonic(KeyEvent.VK_F);
-
-        JMenuItem fileOpen = new JMenuItem("Open");
-        fileOpen.setMnemonic(KeyEvent.VK_O);
-        fileOpen.setAccelerator( KeyStroke.getKeyStroke(KeyEvent.VK_O,
-                ActionEvent.ALT_MASK) );
-        fileOpen.setToolTipText("Open log file");
-        fileOpen.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent event) {
-                mainFrame.openFileBrowser();
-            }
-        });
-        
-        m_recentMenu = new RecentFileMenu("RecentFile",10){
-            public void onSelectFile(String filePath){
-                mainFrame.parseFile(new File(filePath));
-            }
-        };
-        
-        file.add(fileOpen);
-        file.add(m_recentMenu);
-
-        menubar.add(file);
-        mainFrame.setJMenuBar(menubar);
-        
         if(args != null && args.length > 0)
         {
             EventQueue.invokeLater(new Runnable()
@@ -266,7 +249,49 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
         saveFilter();
         saveColor();
+        saveOption();
         System.exit(0);
+    }
+
+    void initMenuBar()
+    {
+         menubar = new JMenuBar();
+         file = new JMenu("File");
+         file.setMnemonic(KeyEvent.VK_F);
+ 
+         fileOpen = new JMenuItem("Open");
+         fileOpen.setMnemonic(KeyEvent.VK_O);
+         fileOpen.setAccelerator( KeyStroke.getKeyStroke(KeyEvent.VK_O,
+                 ActionEvent.ALT_MASK) );
+         fileOpen.setToolTipText("Open log file");
+         fileOpen.addActionListener(new ActionListener() {
+             public void actionPerformed(ActionEvent event) {
+                 openFileBrowser();
+             }
+         });
+         
+         m_recentMenu = new RecentFileMenu("RecentFile",10){
+             public void onSelectFile(String filePath){
+                 parseFile(new File(filePath));
+             }
+         };
+ 
+         menuOption = new JMenu("Option");
+         menuOption_CaseSensitive = new JCheckBoxMenuItem("Case sensitive");
+         menuOption.setToolTipText("Case sensitive");
+         menuOption_CaseSensitive.addActionListener(m_optionActionListener);
+
+         menuOption_timeformat = new JMenuItem("Time format");
+         menuOption_timeformat.addActionListener(m_optionActionListener);
+         
+         file.add(fileOpen);
+         file.add(m_recentMenu);
+         menuOption.add(menuOption_CaseSensitive);
+         menuOption.add(menuOption_timeformat);
+ 
+         menubar.add(file);
+         menubar.add(menuOption);
+         setJMenuBar(menubar);
     }
 
     /**
@@ -297,11 +322,11 @@ public class LogFilterMain extends JFrame implements INotiEvent
         addChangeListener();
         startFilterParse();
 
-        setVisible(true);
         addDesc();
         loadFilter();
         loadColor();
         loadCmd();
+        loadOptionMenu();
         m_tbLogTable.setColumnWidth();
 
 //        if(m_nWindState == JFrame.MAXIMIZED_BOTH)
@@ -309,11 +334,18 @@ public class LogFilterMain extends JFrame implements INotiEvent
             setSize(m_nWinWidth, m_nWinHeight);
             setExtendedState( m_nWindState );
         setMinimumSize(new Dimension(MIN_WIDTH, MIN_HEIGHT));
+        initMenuBar();
+        setVisible(true);
     }
     
+    //ini files
+    final String INI_OPTION         = "LogFilterOption.ini";
     final String INI_FILE           = "LogFilter.ini";
     final String INI_FILE_CMD       = "LogFilterCmd.ini";
     final String INI_FILE_COLOR     = "LogFilterColor.ini";
+
+    //ini property key
+    final String INT_OPTION_CASE_SENSITIVE = "CASE_SENSITIVE";
     final String INI_LAST_DIR       = "LAST_DIR";
     final String INI_CMD_COUNT      = "CMD_COUNT";
     final String INI_CMD            = "CMD_";
@@ -349,6 +381,25 @@ public class LogFilterMain extends JFrame implements INotiEvent
     final String INI_CHECKBOX_HIGHLIGHT     = "INI_CHECKBOX_HIGHLIGHT";
 
     final String INI_COMUMN         = "INI_COMUMN_";
+    
+    void loadOptionMenu()
+    {
+        try
+        {
+            Properties p = new Properties();
+
+            // ini 파일 읽기
+            p.load(new FileInputStream(INI_OPTION));
+                
+            // Key 값 읽기
+            m_bCaseSensitive = p.getProperty(INT_OPTION_CASE_SENSITIVE,"F").equals("T") ? true : false;
+            menuOption_CaseSensitive.setSelected(m_bCaseSensitive);
+        }
+        catch(Exception e)
+        {
+            T.d(e);
+        }
+    }
     
     void loadCmd()
     {
@@ -521,6 +572,21 @@ public class LogFilterMain extends JFrame implements INotiEvent
                 p.setProperty(INI_COMUMN + nIndex, "" + m_tbLogTable.getColumnWidth(nIndex));
             }
             p.store( new FileOutputStream(INI_FILE), "done.");
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+    
+    void saveOption()
+    {
+        try
+        {
+            Properties p = new Properties();
+            p.setProperty(INT_OPTION_CASE_SENSITIVE, m_bCaseSensitive ? "T" : "F");
+
+            p.store( new FileOutputStream(INI_OPTION), "option save done.");
         }
         catch(Exception e)
         {
@@ -1824,7 +1890,11 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
             while(stk2.hasMoreTokens())
             {
-                if(!logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
+                if(m_bCaseSensitive == false && !logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
+                {
+                    found_flag = false;
+                }
+                else if(m_bCaseSensitive == true && !logInfo.m_strMessage.contains(stk2.nextToken()))
                 {
                     found_flag = false;
                 }
@@ -1850,10 +1920,14 @@ public class LogFilterMain extends JFrame implements INotiEvent
             
             while(stk2.hasMoreTokens())
             {
-                if(!logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
+                if(m_bCaseSensitive == false && !logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
                 {
                     found_flag = true;
                 }
+                else if(m_bCaseSensitive == true && !logInfo.m_strMessage.contains(stk2.nextToken()))
+                {
+                    found_flag = true;
+            }
             }
             if(found_flag)
                 return false;
@@ -1870,8 +1944,14 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
         while(stk.hasMoreElements())
         {
-            if(logInfo.m_strTag.toLowerCase().contains(stk.nextToken().toLowerCase()))
+            if(m_bCaseSensitive == false && logInfo.m_strTag.toLowerCase().contains(stk.nextToken().toLowerCase()))
+            {
                 return true;
+        }
+            else if(m_bCaseSensitive == true && logInfo.m_strTag.contains(stk.nextToken()))
+            {
+                return true;
+            }
         }
 
         return false;
@@ -1885,8 +1965,14 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
         while(stk.hasMoreElements())
         {
-            if(logInfo.m_strTag.toLowerCase().contains(stk.nextToken().toLowerCase()))
+            if(m_bCaseSensitive == false && logInfo.m_strTag.toLowerCase().contains(stk.nextToken().toLowerCase()))
+            {
                 return false;
+        }
+            else if(m_bCaseSensitive == true && logInfo.m_strTag.contains(stk.nextToken()))
+            {
+                return false;
+            }
         }
 
         return true;
@@ -1945,6 +2031,18 @@ public class LogFilterMain extends JFrame implements INotiEvent
                 
                 m_tbLogTable.setFont(new Font((String)m_jcFontType.getSelectedItem(), Font.PLAIN, 12));
                 m_tbLogTable.setFontSize(Integer.parseInt(m_tfFontSize.getText()));
+            }
+        }
+    };
+
+    ActionListener m_optionActionListener = new ActionListener(){
+        public void actionPerformed(ActionEvent e) {
+            if(e.getSource().equals(menuOption_CaseSensitive))
+            {
+                T.d("case sensitive option state : " + ((JCheckBoxMenuItem)e.getSource()).isSelected());
+                m_bCaseSensitive = menuOption_CaseSensitive.isSelected();
+                m_nChangedFilter = STATUS_CHANGE;
+                runFilter();
             }
         }
     };
