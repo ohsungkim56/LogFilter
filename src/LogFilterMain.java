@@ -23,6 +23,7 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.BufferedReader;
@@ -31,6 +32,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
@@ -107,6 +109,8 @@ public class LogFilterMain extends JFrame implements INotiEvent
     static final int          STATUS_PARSING             = 2;
     static final int          STATUS_READY               = 4;
     
+    static final int EXTENSION_NUMBER = 5;
+
     final int                 L                          = SwingConstants.LEFT;
     final int                 C                          = SwingConstants.CENTER;
     final int                 R                          = SwingConstants.RIGHT;
@@ -154,6 +158,10 @@ public class LogFilterMain extends JFrame implements INotiEvent
     JCheckBox                 m_chkEnableShowPid;
     JCheckBox                 m_chkEnableShowTid;
     JCheckBox                 m_chkEnableHighlight;
+    JCheckBox                 m_chkEnableFindExt;
+    JCheckBox                 m_chkEnableRemoveExt;
+    JCheckBox                 m_chkEnableShowTagExt;
+    JCheckBox                 m_chkEnableRemoveTagExt;
 
     //Log filter
     JCheckBox                 m_chkVerbose;
@@ -213,6 +221,11 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
     JMenu menuOption;
     JCheckBoxMenuItem menuOption_CaseSensitive;
+    LogFilterExtDialog m_dialogFindExt;
+    LogFilterExtDialog m_dialogRemoveExt;
+    LogFilterExtDialog m_dialogShowTagExt;
+    LogFilterExtDialog m_dialogRemoveTagExt;
+
     public static void main(final String args[])
     {
 //        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -294,6 +307,92 @@ public class LogFilterMain extends JFrame implements INotiEvent
          setJMenuBar(menubar);
     }
 
+    void initExtDialog(){
+        m_dialogFindExt = new LogFilterExtDialog(this, "Find word extension", false, EXTENSION_NUMBER);
+        for(int i=0; i<EXTENSION_NUMBER; i++)
+        {
+            m_dialogFindExt.addCheckBoxEventListener(i, m_ExtDialogActionListener);
+            m_dialogFindExt.addTextAreaEventListener(i, m_ExtDialogKeyListener);
+        }
+        m_dialogFindExt.addWindowListener(new WindowAdapter(){
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                m_chkEnableFindExt.setSelected(false);
+                useFilter(m_chkEnableFindExt);
+            }
+            @Override
+            public void windowOpened(WindowEvent e) {
+                super.windowOpened(e);
+                m_chkEnableFindExt.setSelected(true);
+                useFilter(m_chkEnableFindExt);
+            }
+        });
+
+        m_dialogRemoveExt = new LogFilterExtDialog(this, "Remove word extension", false, EXTENSION_NUMBER);
+        for(int i=0; i<EXTENSION_NUMBER; i++)
+        {
+            m_dialogRemoveExt.addCheckBoxEventListener(i, m_ExtDialogActionListener);
+            m_dialogRemoveExt.addTextAreaEventListener(i, m_ExtDialogKeyListener);
+        }
+        m_dialogRemoveExt.addWindowListener(new WindowAdapter(){
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                m_chkEnableRemoveExt.setSelected(false);
+                useFilter(m_chkEnableRemoveExt);
+            }
+            @Override
+            public void windowOpened(WindowEvent e) {
+                super.windowOpened(e);
+                m_chkEnableRemoveExt.setSelected(true);
+                useFilter(m_chkEnableRemoveExt);
+            }
+        });
+
+        m_dialogShowTagExt = new LogFilterExtDialog(this, "Show tag extension", false, EXTENSION_NUMBER);
+        for(int i=0; i<EXTENSION_NUMBER; i++)
+        {
+            m_dialogShowTagExt.addCheckBoxEventListener(i, m_ExtDialogActionListener);
+            m_dialogShowTagExt.addTextAreaEventListener(i, m_ExtDialogKeyListener);
+        }
+        m_dialogShowTagExt.addWindowListener(new WindowAdapter(){
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                m_chkEnableShowTagExt.setSelected(false);
+                useFilter(m_chkEnableShowTagExt);
+            }
+            @Override
+            public void windowOpened(WindowEvent e) {
+                super.windowOpened(e);
+                m_chkEnableShowTagExt.setSelected(true);
+                useFilter(m_chkEnableShowTagExt);
+            }
+            
+        });
+
+        m_dialogRemoveTagExt = new LogFilterExtDialog(this, "Remove tag extension", false, EXTENSION_NUMBER);
+        for(int i=0; i<EXTENSION_NUMBER; i++)
+        {
+            m_dialogRemoveTagExt.addCheckBoxEventListener(i, m_ExtDialogActionListener);
+            m_dialogRemoveTagExt.addTextAreaEventListener(i, m_ExtDialogKeyListener);
+        }
+        m_dialogRemoveTagExt.addWindowListener(new WindowAdapter(){
+            @Override
+            public void windowClosing(WindowEvent e) {
+                super.windowClosing(e);
+                m_chkEnableRemoveTagExt.setSelected(false);
+                useFilter(m_chkEnableRemoveTagExt);
+            }
+            @Override
+            public void windowOpened(WindowEvent e) {
+                super.windowOpened(e);
+                m_chkEnableRemoveTagExt.setSelected(true);
+                useFilter(m_chkEnableRemoveTagExt);
+            }
+        });
+    }
     /**
      * @throws HeadlessException
      */
@@ -318,6 +417,9 @@ public class LogFilterMain extends JFrame implements INotiEvent
         pane.add(getStatusPanel(), BorderLayout.SOUTH);
         pane.add(getTabPanel(), BorderLayout.CENTER);
 
+        initExtDialog();
+        initMenuBar();
+
         setDnDListener();
         addChangeListener();
         startFilterParse();
@@ -332,14 +434,14 @@ public class LogFilterMain extends JFrame implements INotiEvent
 //        if(m_nWindState == JFrame.MAXIMIZED_BOTH)
 //        else
             setSize(m_nWinWidth, m_nWinHeight);
-            setExtendedState( m_nWindState );
+        setExtendedState(m_nWindState);
         setMinimumSize(new Dimension(MIN_WIDTH, MIN_HEIGHT));
-        initMenuBar();
+
         setVisible(true);
     }
     
     //ini files
-    final String INI_OPTION         = "LogFilterOption.ini";
+    final String INI_OPTION_FILE    = "LogFilterOption.ini";
     final String INI_FILE           = "LogFilter.ini";
     final String INI_FILE_CMD       = "LogFilterCmd.ini";
     final String INI_FILE_COLOR     = "LogFilterColor.ini";
@@ -357,6 +459,10 @@ public class LogFilterMain extends JFrame implements INotiEvent
     final String INI_HIGHLIGHT      = "HIGHLIGHT";
     final String INI_PID_SHOW       = "PID_SHOW";
     final String INI_TID_SHOW       = "TID_SHOW";
+    final String INI_WORD_FIND_EXT  = "WORD_FIND_EXT";
+    final String INI_WORD_REMOVE_EXT= "WORD_REMOVE_EXT";
+    final String INI_TAG_SHOW_EXT   = "TAG_SHOW_EXT";
+    final String INI_TAG_REMOVE_EXT = "TAG_REMOVE_EXT";
     final String INI_COLOR_0        = "INI_COLOR_0";
     final String INI_COLOR_1        = "INI_COLOR_1";
     final String INI_COLOR_2        = "INI_COLOR_2";
@@ -379,6 +485,10 @@ public class LogFilterMain extends JFrame implements INotiEvent
     final String INI_CHECKBOX_SHOW_PID      = "INI_CHECKBOX_SHOW_PID";
     final String INI_CHECKBOX_SHOW_TID      = "INI_CHECKBOX_SHOW_TID";
     final String INI_CHECKBOX_HIGHLIGHT     = "INI_CHECKBOX_HIGHLIGHT";
+    final String INI_CHECKBOX_FIND_EXT      = "INI_CHECKBOX_FIND_EXT";
+    final String INI_CHECKBOX_REMOVE_EXT    = "INI_CHECKBOX_REMOVE_EXT";
+    final String INI_CHECKBOX_TAG_SHOW_EXT  = "INI_CHECKBOX_SHOW_TAG_EXT";
+    final String INI_CHECKBOX_TAG_REMOVE_EXT= "INI_CHECKBOX_REMOVE_TAG_EXT";
 
     final String INI_COMUMN         = "INI_COMUMN_";
     
@@ -387,17 +497,14 @@ public class LogFilterMain extends JFrame implements INotiEvent
         try
         {
             Properties p = new Properties();
-
-            // ini 파일 읽기
-            p.load(new FileInputStream(INI_OPTION));
+            p.load(new FileInputStream(INI_OPTION_FILE));
                 
-            // Key 값 읽기
-            m_bCaseSensitive = p.getProperty(INT_OPTION_CASE_SENSITIVE,"F").equals("T") ? true : false;
-            menuOption_CaseSensitive.setSelected(m_bCaseSensitive);
+            m_tbLogTable.setCaseSensitive(p.getProperty(INT_OPTION_CASE_SENSITIVE,"F").equals("T") ? true : false);
+            menuOption_CaseSensitive.setSelected(m_tbLogTable.getCaseSensitive());
         }
         catch(Exception e)
         {
-            T.d(e);
+            T.e(e);
         }
     }
     
@@ -405,23 +512,22 @@ public class LogFilterMain extends JFrame implements INotiEvent
     {
         try
         {
+            String cmd;
             Properties p = new Properties();
-            
-            // ini 파일 읽기
             p.load(new FileInputStream(INI_FILE_CMD));
             
-            T.d("p.getProperty(INI_CMD_COUNT) = " + p.getProperty(INI_CMD_COUNT));
+            T.d("p.getProperty(INI_CMD_COUNT) = " + p.getProperty(INI_CMD_COUNT, "0"));
             int nCount = Integer.parseInt(p.getProperty(INI_CMD_COUNT));
-            T.d("nCount = " + nCount);
             for(int nIndex = 0; nIndex < nCount; nIndex++)
             {
-                T.d("CMD = " + INI_CMD + nIndex);
-                m_comboCmd.addItem(p.getProperty(INI_CMD + nIndex));
+                cmd = p.getProperty(INI_CMD + nIndex);
+                T.d("CMD = " + cmd);
+                m_comboCmd.addItem(cmd);
             }
         }
         catch(Exception e)
         {
-            System.out.println(e);
+            T.e(e);
         }
     }
     
@@ -430,7 +536,6 @@ public class LogFilterMain extends JFrame implements INotiEvent
         try
         {
             Properties p = new Properties();
-            
             p.load(new FileInputStream(INI_FILE_COLOR));
             
             LogColor.COLOR_0 = Integer.parseInt(p.getProperty(INI_COLOR_0).replace("0x", ""), 16);
@@ -458,7 +563,7 @@ public class LogFilterMain extends JFrame implements INotiEvent
         }
         catch(Exception e)
         {
-            System.out.println(e);
+            T.e(e);
         }
     }
     
@@ -485,11 +590,11 @@ public class LogFilterMain extends JFrame implements INotiEvent
                     p.setProperty(INI_HIGILIGHT_ + nIndex, "0x" + LogColor.COLOR_HIGHLIGHT[nIndex].toUpperCase());
             }
 
-            p.store( new FileOutputStream(INI_FILE_COLOR), "done.");
+            p.store(new FileOutputStream(INI_FILE_COLOR), "");
         }
         catch(Exception e)
         {
-            e.printStackTrace();
+            T.e(e);
         }
     }
     
@@ -499,10 +604,13 @@ public class LogFilterMain extends JFrame implements INotiEvent
         {
             Properties p = new Properties();
             
-            // ini 파일 읽기
+            File f = new File(INI_FILE);
+
+            if(f.exists() == false)
+                f.createNewFile();
+
             p.load(new FileInputStream(INI_FILE));
             
-            // Key 값 읽기
             String strFontType = p.getProperty(INI_FONT_TYPE);
             if(strFontType != null && strFontType.length() > 0)
                 m_jcFontType.setSelectedItem(p.getProperty(INI_FONT_TYPE));
@@ -529,10 +637,30 @@ public class LogFilterMain extends JFrame implements INotiEvent
             {
                 LogFilterTableModel.setColumnWidth( nIndex, Integer.parseInt( p.getProperty( INI_COMUMN + nIndex) ) );
             }
+
+            for(int i=0; i<EXTENSION_NUMBER; i++)
+            {
+                m_dialogFindExt.setExtFilter(i, p.getProperty(INI_WORD_FIND_EXT + i, ""));
+                m_dialogRemoveExt.setExtFilter(i, p.getProperty(INI_WORD_REMOVE_EXT + i, ""));
+                m_dialogShowTagExt.setExtFilter(i, p.getProperty(INI_TAG_SHOW_EXT + i, ""));
+                m_dialogRemoveTagExt.setExtFilter(i, p.getProperty(INI_TAG_REMOVE_EXT + i, ""));
+                m_dialogFindExt.setExtFilterEnabled(i, p.getProperty(INI_CHECKBOX_FIND_EXT + i, "F").equals("T") ? true : false);
+                m_dialogRemoveExt.setExtFilterEnabled(i, p.getProperty(INI_CHECKBOX_REMOVE_EXT + i, "F").equals("T") ? true : false);
+                m_dialogShowTagExt.setExtFilterEnabled(i, p.getProperty(INI_CHECKBOX_TAG_SHOW_EXT + i, "F").equals("T") ? true : false);
+                m_dialogRemoveTagExt.setExtFilterEnabled(i, p.getProperty(INI_CHECKBOX_TAG_REMOVE_EXT + i, "F").equals("T") ? true : false);
         }
-        catch(Exception e)
-        {
-            System.out.println(e);
+        }
+        catch(IOException e){
+            T.e("file create fail");
+            e.printStackTrace();
+        }
+        catch(SecurityException e){
+            T.e("file create fail");
+            e.printStackTrace();
+        }
+        catch(Exception e){
+            T.e("Property read error");
+            e.printStackTrace();
         }
     }
     
@@ -567,11 +695,24 @@ public class LogFilterMain extends JFrame implements INotiEvent
             p.setProperty(INI_CHECKBOX_SHOW_TID, m_chkEnableShowTid.isSelected() ? "T" : "F");
             p.setProperty(INI_CHECKBOX_HIGHLIGHT, m_chkEnableHighlight.isSelected() ? "T" : "F");
 
+            for(int i=0;i<EXTENSION_NUMBER;i++)
+            {
+                p.setProperty(INI_WORD_FIND_EXT + i, m_dialogFindExt.getExtFilter(i));
+                p.setProperty(INI_WORD_REMOVE_EXT + i, m_dialogRemoveExt.getExtFilter(i));
+                p.setProperty(INI_TAG_SHOW_EXT + i, m_dialogShowTagExt.getExtFilter(i));
+                p.setProperty(INI_TAG_REMOVE_EXT + i, m_dialogRemoveTagExt.getExtFilter(i));
+
+                p.setProperty(INI_CHECKBOX_FIND_EXT + i, m_dialogFindExt.getExtFilterSelected(i) ? "T" : "F");
+                p.setProperty(INI_CHECKBOX_REMOVE_EXT + i, m_dialogRemoveExt.getExtFilterSelected(i) ? "T" : "F");
+                p.setProperty(INI_CHECKBOX_TAG_SHOW_EXT + i, m_dialogShowTagExt.getExtFilterSelected(i) ? "T" : "F");
+                p.setProperty(INI_CHECKBOX_TAG_REMOVE_EXT + i, m_dialogRemoveTagExt.getExtFilterSelected(i) ? "T" : "F");
+            }
+
             for(int nIndex = 0; nIndex < LogFilterTableModel.COMUMN_MAX; nIndex++)
             {
                 p.setProperty(INI_COMUMN + nIndex, "" + m_tbLogTable.getColumnWidth(nIndex));
             }
-            p.store( new FileOutputStream(INI_FILE), "done.");
+            p.store( new FileOutputStream(INI_FILE), "");
         }
         catch(Exception e)
         {
@@ -584,9 +725,8 @@ public class LogFilterMain extends JFrame implements INotiEvent
         try
         {
             Properties p = new Properties();
-            p.setProperty(INT_OPTION_CASE_SENSITIVE, m_bCaseSensitive ? "T" : "F");
-
-            p.store( new FileOutputStream(INI_OPTION), "option save done.");
+            p.setProperty(INT_OPTION_CASE_SENSITIVE, m_tbLogTable.getCaseSensitive() ? "T" : "F");
+            p.store( new FileOutputStream(INI_OPTION_FILE), "");
         }
         catch(Exception e)
         {
@@ -863,6 +1003,11 @@ public class LogFilterMain extends JFrame implements INotiEvent
         m_chkEnableRemoveTag.addItemListener(m_itemListener);
         m_chkEnableHighlight.addItemListener(m_itemListener);
 
+        m_chkEnableFindExt.addItemListener(m_itemListener);
+        m_chkEnableRemoveExt.addItemListener(m_itemListener);
+        m_chkEnableShowTagExt.addItemListener(m_itemListener);
+        m_chkEnableRemoveTagExt.addItemListener(m_itemListener);
+        
         m_chkVerbose.addItemListener(m_itemListener);
         m_chkDebug.addItemListener(m_itemListener);
         m_chkInfo.addItemListener(m_itemListener);
@@ -903,12 +1048,20 @@ public class LogFilterMain extends JFrame implements INotiEvent
         m_chkEnableRemoveTag    = new JCheckBox();
         m_chkEnableShowPid      = new JCheckBox();
         m_chkEnableShowTid      = new JCheckBox();
+        m_chkEnableFindExt      = new JCheckBox();
+        m_chkEnableRemoveExt    = new JCheckBox();
+        m_chkEnableShowTagExt   = new JCheckBox();
+        m_chkEnableRemoveTagExt = new JCheckBox();
         m_chkEnableFind.setSelected(true);
         m_chkEnableRemove.setSelected(true);
         m_chkEnableShowTag.setSelected(true);
         m_chkEnableRemoveTag.setSelected(true);
         m_chkEnableShowPid.setSelected(true);
         m_chkEnableShowTid.setSelected(true);
+        m_chkEnableFindExt.setSelected(false);
+        m_chkEnableRemoveExt.setSelected(false);
+        m_chkEnableShowTagExt.setSelected(false);
+        m_chkEnableRemoveTagExt.setSelected(false);
 
         m_tfFindWord    = new JTextField();
         m_tfRemoveWord  = new JTextField();
@@ -927,14 +1080,20 @@ public class LogFilterMain extends JFrame implements INotiEvent
         find.setText("        Find : ");
         jpFind.add(find, BorderLayout.WEST);
         jpFind.add(m_tfFindWord, BorderLayout.CENTER);
-        jpFind.add(m_chkEnableFind, BorderLayout.EAST);
+        JPanel jpFindChk = new JPanel(new FlowLayout(FlowLayout.CENTER,0,0));
+        jpFindChk.add(m_chkEnableFind);
+        jpFindChk.add(m_chkEnableFindExt);
+        jpFind.add(jpFindChk, BorderLayout.EAST);
 
         JPanel jpRemove = new JPanel(new BorderLayout());
         JLabel remove = new JLabel();
         remove.setText("Remove : ");
         jpRemove.add(remove, BorderLayout.WEST);
         jpRemove.add(m_tfRemoveWord, BorderLayout.CENTER);
-        jpRemove.add(m_chkEnableRemove, BorderLayout.EAST);
+        JPanel jpRemoveChk = new JPanel(new FlowLayout(FlowLayout.CENTER,0,0));
+        jpRemoveChk.add(m_chkEnableRemove);
+        jpRemoveChk.add(m_chkEnableRemoveExt);
+        jpRemove.add(jpRemoveChk, BorderLayout.EAST);
 
         jpWordFilter.add(jpFind, BorderLayout.NORTH);
         jpWordFilter.add(jpRemove);
@@ -963,14 +1122,20 @@ public class LogFilterMain extends JFrame implements INotiEvent
         show.setText("     Show : ");
         jpShow.add(show, BorderLayout.WEST);
         jpShow.add(m_tfShowTag, BorderLayout.CENTER);
-        jpShow.add(m_chkEnableShowTag, BorderLayout.EAST);
+        JPanel jpShowTagChk = new JPanel(new FlowLayout(FlowLayout.CENTER,0,0));
+        jpShowTagChk.add(m_chkEnableShowTag);
+        jpShowTagChk.add(m_chkEnableShowTagExt);
+        jpShow.add(jpShowTagChk, BorderLayout.EAST);
 
         JPanel jpRemoveTag = new JPanel(new BorderLayout());
         JLabel removeTag = new JLabel();
         removeTag.setText("Remove : ");
         jpRemoveTag.add(removeTag, BorderLayout.WEST);
         jpRemoveTag.add(m_tfRemoveTag, BorderLayout.CENTER);
-        jpRemoveTag.add(m_chkEnableRemoveTag, BorderLayout.EAST);
+        JPanel jpRemoveTagChk = new JPanel(new FlowLayout(FlowLayout.CENTER,0,0));
+        jpRemoveTagChk.add(m_chkEnableRemoveTag);
+        jpRemoveTagChk.add(m_chkEnableRemoveTagExt);
+        jpRemoveTag.add(jpRemoveTagChk, BorderLayout.EAST);
 
         jpTagFilter.add(jpPid);
         jpTagFilter.add(jpTid);
@@ -1444,6 +1609,15 @@ public class LogFilterMain extends JFrame implements INotiEvent
             m_tbLogTable.SetFilterRemoveTag(checkBox.isSelected() ? m_tfRemoveTag.getText() : "");
         if(checkBox.equals(m_chkEnableHighlight))
             m_tbLogTable.SetHighlight(checkBox.isSelected() ? m_tfHighlight.getText() : "");
+        if(checkBox.equals(m_chkEnableFindExt))
+            m_tbLogTable.SetFilterFindExt(checkBox.isSelected() ? m_dialogFindExt.getEnabledExtFilter() : "");
+        if(checkBox.equals(m_chkEnableRemoveExt))
+            m_tbLogTable.SetFilterRemoveExt(checkBox.isSelected() ? m_dialogRemoveExt.getEnabledExtFilter() : "");
+        if(checkBox.equals(m_chkEnableShowTagExt))
+            m_tbLogTable.SetTagShowExt(checkBox.isSelected() ? m_dialogShowTagExt.getEnabledExtFilter() : "");
+        if(checkBox.equals(m_chkEnableRemoveTagExt))
+            m_tbLogTable.SetTagRemoveExt(checkBox.isSelected() ? m_dialogRemoveTagExt.getEnabledExtFilter() : "");
+
         m_nChangedFilter = STATUS_CHANGE;
         runFilter();
     }
@@ -1878,9 +2052,9 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
     boolean checkFindFilter(LogInfo logInfo)
     {
-        if(m_tbLogTable.GetFilterFind().length() <= 0) return true;
+        if(m_tbLogTable.GetFilterFind().length() <= 0 && m_tbLogTable.GetFilterFindExt().length() <=0) return true;
 
-        StringTokenizer stk = new StringTokenizer(m_tbLogTable.GetFilterFind(), "|", false);
+        StringTokenizer stk = new StringTokenizer(m_tbLogTable.GetFilterFind() + "|" + m_tbLogTable.GetFilterFindExt(), "|", false);
 
         while(stk.hasMoreElements())
         {
@@ -1890,11 +2064,11 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
             while(stk2.hasMoreTokens())
             {
-                if(m_bCaseSensitive == false && !logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
+                if(m_tbLogTable.getCaseSensitive() == false && !logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
                 {
                     found_flag = false;
                 }
-                else if(m_bCaseSensitive == true && !logInfo.m_strMessage.contains(stk2.nextToken()))
+                else if(m_tbLogTable.getCaseSensitive() == true && !logInfo.m_strMessage.contains(stk2.nextToken()))
                 {
                     found_flag = false;
                 }
@@ -1908,9 +2082,9 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
     boolean checkRemoveFilter(LogInfo logInfo)
     {
-        if(m_tbLogTable.GetFilterRemove().length() <= 0) return true;
+        if(m_tbLogTable.GetFilterRemove().length() <= 0 && m_tbLogTable.GetFilterRemoveExt().length() <=0) return true;
 
-        StringTokenizer stk = new StringTokenizer(m_tbLogTable.GetFilterRemove(), "|", false);
+        StringTokenizer stk = new StringTokenizer(m_tbLogTable.GetFilterRemove() + "|" + m_tbLogTable.GetFilterRemoveExt(), "|", false);
 
         while(stk.hasMoreElements())
         {
@@ -1920,11 +2094,11 @@ public class LogFilterMain extends JFrame implements INotiEvent
             
             while(stk2.hasMoreTokens())
             {
-                if(m_bCaseSensitive == false && !logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
+                if(m_tbLogTable.getCaseSensitive() == false && !logInfo.m_strMessage.toLowerCase().contains(stk2.nextToken().toLowerCase()))
                 {
                     found_flag = true;
                 }
-                else if(m_bCaseSensitive == true && !logInfo.m_strMessage.contains(stk2.nextToken()))
+                else if(m_tbLogTable.getCaseSensitive() == true && !logInfo.m_strMessage.contains(stk2.nextToken()))
                 {
                     found_flag = true;
             }
@@ -1938,17 +2112,17 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
     boolean checkShowTagFilter(LogInfo logInfo)
     {
-        if(m_tbLogTable.GetFilterShowTag().length() <= 0) return true;
+        if(m_tbLogTable.GetFilterShowTag().length() <= 0 && m_tbLogTable.GetTagShowExt().length() <=0) return true;
 
-        StringTokenizer stk = new StringTokenizer(m_tbLogTable.GetFilterShowTag(), "|", false);
+        StringTokenizer stk = new StringTokenizer(m_tbLogTable.GetFilterShowTag() + "|" + m_tbLogTable.GetTagShowExt(), "|", false);
 
         while(stk.hasMoreElements())
         {
-            if(m_bCaseSensitive == false && logInfo.m_strTag.toLowerCase().contains(stk.nextToken().toLowerCase()))
+            if(m_tbLogTable.getCaseSensitive() == false && logInfo.m_strTag.toLowerCase().contains(stk.nextToken().toLowerCase()))
             {
                 return true;
         }
-            else if(m_bCaseSensitive == true && logInfo.m_strTag.contains(stk.nextToken()))
+            else if(m_tbLogTable.getCaseSensitive() == true && logInfo.m_strTag.contains(stk.nextToken()))
             {
                 return true;
             }
@@ -1959,17 +2133,17 @@ public class LogFilterMain extends JFrame implements INotiEvent
 
     boolean checkRemoveTagFilter(LogInfo logInfo)
     {
-        if(m_tbLogTable.GetFilterRemoveTag().length() <= 0) return true;
+        if(m_tbLogTable.GetFilterRemoveTag().length() <= 0 && m_tbLogTable.GetTagRemoveExt().length() <=0) return true;
 
-        StringTokenizer stk = new StringTokenizer(m_tbLogTable.GetFilterRemoveTag(), "|", false);
+        StringTokenizer stk = new StringTokenizer(m_tbLogTable.GetFilterRemoveTag() + "|" + m_tbLogTable.GetTagRemoveExt(), "|", false);
 
         while(stk.hasMoreElements())
         {
-            if(m_bCaseSensitive == false && logInfo.m_strTag.toLowerCase().contains(stk.nextToken().toLowerCase()))
+            if(m_tbLogTable.getCaseSensitive() == false && logInfo.m_strTag.toLowerCase().contains(stk.nextToken().toLowerCase()))
             {
                 return false;
         }
-            else if(m_bCaseSensitive == true && logInfo.m_strTag.contains(stk.nextToken()))
+            else if(m_tbLogTable.getCaseSensitive() == true && logInfo.m_strTag.contains(stk.nextToken()))
             {
                 return false;
             }
@@ -1988,7 +2162,11 @@ public class LogFilterMain extends JFrame implements INotiEvent
             && (m_tbLogTable.GetFilterShowTag().length() == 0   || !m_chkEnableShowTag.isSelected())
             && (m_tbLogTable.GetFilterRemoveTag().length() == 0 || !m_chkEnableRemoveTag.isSelected())
             && (m_tbLogTable.GetFilterFind().length() == 0      || !m_chkEnableFind.isSelected())
-            && (m_tbLogTable.GetFilterRemove().length() == 0    || !m_chkEnableRemove.isSelected()))
+            && (m_tbLogTable.GetFilterRemove().length() == 0    || !m_chkEnableRemove.isSelected())
+            && (m_tbLogTable.GetFilterFindExt().length() == 0 || !m_chkEnableFindExt.isSelected())
+            && (m_tbLogTable.GetFilterRemoveExt().length() == 0 || !m_chkEnableRemoveExt.isSelected())
+            && (m_tbLogTable.GetTagShowExt().length() == 0 || !m_chkEnableShowTagExt.isSelected())
+            && (m_tbLogTable.GetTagRemoveExt().length() == 0 || !m_chkEnableRemoveTagExt.isSelected()))
         {
             m_bUserFilter = false;
         }
@@ -2040,7 +2218,7 @@ public class LogFilterMain extends JFrame implements INotiEvent
             if(e.getSource().equals(menuOption_CaseSensitive))
             {
                 T.d("case sensitive option state : " + ((JCheckBoxMenuItem)e.getSource()).isSelected());
-                m_bCaseSensitive = menuOption_CaseSensitive.isSelected();
+                m_tbLogTable.setCaseSensitive(menuOption_CaseSensitive.isSelected());
                 m_nChangedFilter = STATUS_CHANGE;
                 runFilter();
             }
@@ -2203,7 +2381,61 @@ public class LogFilterMain extends JFrame implements INotiEvent
                     || check.equals(m_chkEnableRemoveTag)
                     || check.equals(m_chkEnableHighlight))
                 useFilter(check);
+            else if(check.equals(m_chkEnableFindExt)){
+                m_dialogFindExt.setVisible(check.isSelected());
+                useFilter(check);
+            }
+            else if(check.equals(m_chkEnableRemoveExt)){
+                m_dialogRemoveExt.setVisible(check.isSelected());
+                useFilter(check);
+            }
+            else if(check.equals(m_chkEnableShowTagExt)){
+                m_dialogShowTagExt.setVisible(check.isSelected());
+                useFilter(check);
+            }
+            else if(check.equals(m_chkEnableRemoveTagExt)){
+                m_dialogRemoveTagExt.setVisible(check.isSelected());
+                useFilter(check);
+            }
         }
+    };
+
+    ActionListener m_ExtDialogActionListener = new ActionListener(){
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            if(m_dialogFindExt.hasCheckBox(e.getSource())){
+                useFilter(m_chkEnableFindExt);
+            }
+            else if(m_dialogRemoveExt.hasCheckBox(e.getSource())){
+                useFilter(m_chkEnableRemoveExt);
+            }
+            else if(m_dialogShowTagExt.hasCheckBox(e.getSource())){
+                useFilter(m_chkEnableShowTagExt);
+            }
+            else if(m_dialogRemoveTagExt.hasCheckBox(e.getSource())){
+                useFilter(m_chkEnableRemoveTagExt);
+            }
+        }
+    };
+
+    KeyListener m_ExtDialogKeyListener = new KeyListener(){
+        public void keyReleased(KeyEvent e) {
+            int i;
+            if((i = m_dialogFindExt.hasTextArea(e.getSource())) != -1 &&  m_dialogFindExt.getExtFilterSelected(i)){
+                useFilter(m_chkEnableFindExt);
+            }
+            else if((i = m_dialogRemoveExt.hasTextArea(e.getSource())) != -1 &&  m_dialogRemoveExt.getExtFilterSelected(i)){
+                useFilter(m_chkEnableRemoveExt);
+            }
+            else if((i = m_dialogShowTagExt.hasTextArea(e.getSource())) != -1 &&  m_dialogShowTagExt.getExtFilterSelected(i)){
+                useFilter(m_chkEnableShowTagExt);
+            }
+            else if((i = m_dialogRemoveTagExt.hasTextArea(e.getSource())) != -1 &&  m_dialogRemoveTagExt.getExtFilterSelected(i)){
+                useFilter(m_chkEnableRemoveTagExt);
+            }
+        }
+        public void keyPressed(KeyEvent e) {}
+        public void keyTyped(KeyEvent e) {}
     };
     
     public void openFileBrowser()

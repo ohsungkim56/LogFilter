@@ -40,10 +40,15 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
     String m_strTagRemove;
     String m_strFilterRemove;
     String m_strFilterFind;
+    String m_strTagShowExt;
+    String m_strTagRemoveExt;
+    String m_strFilterRemoveExt;
+    String m_strFilterFindExt;
     float m_fFontSize;
     boolean m_bAltPressed;
     int m_nTagLength;
     boolean[] m_arbShow;
+    boolean m_bCaseSensitive;
 
     public LogTable(LogFilterTableModel tablemodel, LogFilterMain filterMain) {
         super(tablemodel);
@@ -55,10 +60,23 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
         m_strTagRemove = "";
         m_strFilterRemove = "";
         m_strFilterFind = "";
+        m_strTagShowExt = "";
+        m_strTagRemoveExt = "";
+        m_strFilterRemoveExt = "";
+        m_strFilterFindExt = "";
+        m_bCaseSensitive = false;
         m_nTagLength = 0;
         m_arbShow = new boolean[LogFilterTableModel.COMUMN_MAX];
         init();
         setColumnWidth();
+    }
+
+    public boolean getCaseSensitive(){
+        return m_bCaseSensitive;
+    }
+
+    public void setCaseSensitive(boolean v){
+        m_bCaseSensitive = v;
     }
 
     public void changeSelection(int rowIndex, int columnIndex, boolean toggle, boolean extend) {
@@ -106,11 +124,11 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
         }
 
         addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                Point p = e.getPoint();
+            public void mouseClicked(MouseEvent event) {
+                Point p = event.getPoint();
                 int row = rowAtPoint(p);
-                if (SwingUtilities.isLeftMouseButton(e)) {
-                    if (e.getClickCount() == 2) {
+                if (SwingUtilities.isLeftMouseButton(event)) {
+                    if (event.getClickCount() == 2) {
                         LogInfo logInfo = ((LogFilterTableModel) getModel()).getRow(row);
                         logInfo.m_bMarked = !logInfo.m_bMarked;
                         m_LogFilterMain.bookmarkItem(row, Integer.parseInt(logInfo.m_strLine) - 1, logInfo.m_bMarked);
@@ -128,7 +146,24 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
                                     .notiEvent(new INotiEvent.EventParam(INotiEvent.EVENT_CHANGE_FILTER_SHOW_TAG));
                         }
                     }
-                } else if (SwingUtilities.isRightMouseButton(e)) {
+                    else if(m_LogFilterMain.m_tbLogTable.getSelectedRowCount() == 2) {
+                        int[] selectedRowindex = m_LogFilterMain.m_tbLogTable.getSelectedRows();
+                        T.d("[selectedRowindex]" + selectedRowindex[0] + ", " + selectedRowindex[1]);
+                        String log0 = (String)((LogFilterTableModel) getModel()).getRow(selectedRowindex[0]).getData(LogFilterTableModel.COMUMN_TIME);
+                        String log1 = (String)((LogFilterTableModel) getModel()).getRow(selectedRowindex[1]).getData(LogFilterTableModel.COMUMN_TIME);
+                        //log0 = log0.replaceAll("[^\\-\\.\\d]]", "").trim();
+                        log0 = log0.compareTo("") == 0 ? "0" : log0;
+                        //log1 = log1.replaceAll("[^\\-\\.\\d]]", "").trim();
+                        log1 = log1.compareTo("") == 0 ? "0" : log1;
+                        try{
+                            m_LogFilterMain.m_tfTimeDiff.setText("" + (Float.valueOf(log1) - Float.valueOf(log0)));
+                        }
+                        catch(NumberFormatException e){
+                            m_LogFilterMain.m_tfTimeDiff.setText("Time parse error");
+                            T.d("[selectedRowindex] log0 : " + log0 + ", log1 : " + log1);
+                        }
+                    }
+                } else if (SwingUtilities.isRightMouseButton(event)) {
                     int colum = columnAtPoint(p);
                     T.d("m_bAltPressed = " + m_bAltPressed);
                     if (m_bAltPressed) {
@@ -403,6 +438,38 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
     void SetFilterRemoveTag(String strRemoveTag) {
         m_strTagRemove = strRemoveTag;
     }
+    
+    public String GetTagShowExt() {
+        return m_strTagShowExt;
+    }
+
+    public void SetTagShowExt(String m_strTagShowExt) {
+        this.m_strTagShowExt = m_strTagShowExt;
+    }
+
+    public String GetTagRemoveExt() {
+        return m_strTagRemoveExt;
+    }
+
+    public void SetTagRemoveExt(String m_strTagRemoveExt) {
+        this.m_strTagRemoveExt = m_strTagRemoveExt;
+    }
+
+    public String GetFilterRemoveExt() {
+        return m_strFilterRemoveExt;
+    }
+
+    public void SetFilterRemoveExt(String m_strFilterRemoveExt) {
+        this.m_strFilterRemoveExt = m_strFilterRemoveExt;
+    }
+
+    public String GetFilterFindExt() {
+        return m_strFilterFindExt;
+    }
+
+    public void SetFilterFindExt(String m_strFilterFindExt) {
+        this.m_strFilterFindExt = m_strFilterFindExt;
+    }
 
     public void setFontSize(int nFontSize) {
         m_fFontSize = nFontSize;
@@ -448,7 +515,20 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
             if (nIndex != LogFilterTableModel.COMUMN_MESSAGE && nIndex != LogFilterTableModel.COMUMN_TAG)
                 return strText;
 
-            String strFind = nIndex == LogFilterTableModel.COMUMN_MESSAGE ? GetFilterFind() : GetFilterShowTag();
+            String strFind = "";
+            if(nIndex == LogFilterTableModel.COMUMN_MESSAGE){
+                strFind = GetFilterFind();
+                String strExtDialogFindFilter = GetFilterFindExt();
+                if(strExtDialogFindFilter.length() > 0){
+                    if(strFind.length() > 0){
+                        strFind += "|";
+                    }
+                    strFind += strExtDialogFindFilter;
+                }
+             }else{
+                strFind = GetFilterShowTag();
+             }
+
             m_bChanged = false;
 
             strText = strText.replace(" ", "\u00A0");
@@ -472,7 +552,7 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
             String strToken;
             int nIndex = 0;
             String formatString;
-            
+
             if(bUseSpan)
                 formatString = "<span style=\"background-color:#%s\"><b>$1</b></span>";
             else
@@ -483,11 +563,18 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
                     nIndex = 0;
                 strToken = stk.nextToken();
 
-                if(strText.toLowerCase().contains(strToken.toLowerCase()))
-                {
-                    strText = strText.replaceAll("("+strToken+")", String.format(formatString, arColor[nIndex]));
-                    m_bChanged = true;
-                    nIndex++;
+                if(m_bCaseSensitive){
+                    if(strText.contains(strToken)){
+                        strText = strText.replaceAll("("+strToken+")", String.format(formatString, arColor[nIndex]));
+                        m_bChanged = true;
+                        nIndex++;
+                    }
+                }else{
+                    if(strText.toLowerCase().contains(strToken.toLowerCase())){
+                        strText = strText.replaceAll("(?i)"+"("+strToken+")", String.format(formatString, arColor[nIndex]));
+                        m_bChanged = true;
+                        nIndex++;
+                    }
                 }
             }
             return strText;
@@ -511,10 +598,16 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
             {
                 strToken = stk.nextToken();
 
-                if(strText.toLowerCase().contains(strToken.toLowerCase()))
-                {
-                    strText = strText.replaceAll("("+strToken+")", String.format(formatString, strColor));
-                    m_bChanged = true;
+                if(m_bCaseSensitive){
+                    if(strText.contains(strToken)){
+                        strText = strText.replaceAll("("+strToken+")", String.format(formatString, strColor));
+                        m_bChanged = true;
+                    }
+                }else{
+                    if(strText.toLowerCase().contains(strToken.toLowerCase())){
+                        strText = strText.replaceAll("(?i)"+"("+strToken+")", String.format(formatString, strColor));
+                        m_bChanged = true;
+                    }
                 }
             }
             return strText;
