@@ -294,13 +294,13 @@ public class LogFilterMain extends JFrame implements INotiEvent
          menuOption.setToolTipText("Case sensitive");
          menuOption_CaseSensitive.addActionListener(m_optionActionListener);
 
-         menuOption_timeformat = new JMenuItem("Time format");
-         menuOption_timeformat.addActionListener(m_optionActionListener);
+         //menuOption_timeformat = new JMenuItem("Time format");
+         //menuOption_timeformat.addActionListener(m_optionActionListener);
          
          file.add(fileOpen);
          file.add(m_recentMenu);
          menuOption.add(menuOption_CaseSensitive);
-         menuOption.add(menuOption_timeformat);
+         //menuOption.add(menuOption_timeformat);
  
          menubar.add(file);
          menubar.add(menuOption);

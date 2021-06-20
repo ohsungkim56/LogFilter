@@ -155,13 +155,13 @@ public class LogTable extends JTable implements FocusListener, ActionListener {
                         log0 = log0.compareTo("") == 0 ? "0" : log0;
                         //log1 = log1.replaceAll("[^\\-\\.\\d]]", "").trim();
                         log1 = log1.compareTo("") == 0 ? "0" : log1;
-                        try{
-                            m_LogFilterMain.m_tfTimeDiff.setText("" + (Float.valueOf(log1) - Float.valueOf(log0)));
-                        }
-                        catch(NumberFormatException e){
-                            m_LogFilterMain.m_tfTimeDiff.setText("Time parse error");
-                            T.d("[selectedRowindex] log0 : " + log0 + ", log1 : " + log1);
-                        }
+                        // try{
+                        //     m_LogFilterMain.m_tfTimeDiff.setText("" + (Float.valueOf(log1) - Float.valueOf(log0)));
+                        // }
+                        // catch(NumberFormatException e){
+                        //     m_LogFilterMain.m_tfTimeDiff.setText("Time parse error");
+                        //     T.d("[selectedRowindex] log0 : " + log0 + ", log1 : " + log1);
+                        // }
                     }
                 } else if (SwingUtilities.isRightMouseButton(event)) {
                     int colum = columnAtPoint(p);
