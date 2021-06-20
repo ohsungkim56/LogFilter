@@ -2,13 +2,19 @@
 
 java -version
 
-mkdir Build_output
-mkdir Bin
+pushd .
+cd ..
+mkdir bin
+mkdir jar
+popd
 
-del /Q .\Build_output\*
+:: class files remove
+::del /Q ..\bin\* >nul 2>&1
+del /Q ..\bin\*
 
 echo [*] building src
-javac -verbose -encoding utf-8 -Xlint:unchecked -d .\Build_output\ -s ..\src\ ..\src\* 2> Buildlog.log
+::javac -verbose -encoding utf-8 -Xlint:unchecked -Xlint:-deprecation -d ..\bin\ -s ..\src\ ..\src\* 2> Buildlog.log
+javac -verbose -encoding utf-8 -Xlint:unchecked -Xlint:-deprecation -d ..\bin\ -s ..\src\ ..\src\*
 
 :: check comfile error
 if NOT ERRORLEVEL 0 (
@@ -18,20 +24,19 @@ goto exit
 
 :: check menifest
 if NOT EXIST manifest.txt (
-echo [!] No menifest.txt file found. use default one.
-echo Main-class: LogFilterMain > manifest.txt
+echo [!] No menifest.txt file found. use default.
+echo Main-class: LogFilterMain > ..\manifest.txt
 )
 
-pushd 
-cd Build_output
-
-echo [*] building class files
-jar -cvmf ..\manifest.txt ..\Bin\logfilter.jar * >> ..\Buildlog.log
-echo [*] Done.
-
+pushd .
+cd ..\bin
+echo [*] making jar.
+::jar -cvmf ..\manifest.txt ..\jar\logfilter.jar * >> ..\build\Buildlog.log
+jar -cvmf ..\manifest.txt ..\jar\logfilter.jar *
 popd
+
+echo [*] jar is made.
+
 
 :exit
 
-
-pause
